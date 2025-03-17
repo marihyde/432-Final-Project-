@@ -5,10 +5,15 @@ Group 1
 **Team Members:**
 
 Chang, Jamie
+
 Goodman, Jade
+
 Hyde, Mari
+
 Joshi, Laavanya
+
 Samson, Kyle
+
 Tran, Krystal
 
 **Dataset**
