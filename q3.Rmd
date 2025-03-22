@@ -1,0 +1,86 @@
+
+## Question 3
+
+```{r message=F, warning=F}
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(cowplot)
+source("http://bit.ly/theme_pub")
+```
+
+```{r}
+data = read.table("./data/rawGeneExpression.txt", header=T, sep = "\t")
+
+# remove unwanted columns & rename
+data = data %>% 
+  select(1:5) %>%
+  rename(Bacteria = X)
+
+data$Bacteria = str_extract(data$Bacteria, "^[^;]+") # removing extra stuff from bacteria name
+```
+
+```{r warning=F}
+PCA_data = as.data.frame(scale(data[2:5])) # scale data
+
+PCA = princomp(PCA_data, cor=T) # run PCA
+
+PCA_data$PC1 = PCA$scores[,1] # getting PC axes for plot
+PCA_data$PC2 = PCA$scores[,2]
+PCA_data$Bacteria = data$Bacteria # add names back for colour coding
+
+ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme_pub() # plot is bad, we will remove outliers
+```
+
+```{r warning=FALSE}
+PCA_data = PCA_data[-which(PCA_data$PC1 > -0.13),] # remove outliers, only 23 observation difference
+
+x = ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme(legend.text = element_text(size = 8), legend.key.size = unit(0.5, "cm"))
+
+legend = get_legend(x) # get and print legend (legend too big to print with graph)
+plot_grid(legend)
+```
+
+```{r}
+# plot with X marking the bacteria of interest
+x + theme_pub() + geom_text(data = subset(PCA_data, Bacteria %in% c("Borreliella burgdorferi", "Borrelia miyamotoi", "Anaplasma phagocytophilum")), aes(label = "X"), size=3, hjust = 0.5, vjust = -1)
+```
+
+*NOTE* We need to find a better way to read this PCA graph. There are way too many bacteria to use colours or shapes. 
+
+```{r warning=F}
+# set up data for correlation calculations
+grouped_data = PCA_data %>%
+  group_by(Bacteria) %>%
+  summarise(across(starts_with("X"), mean))
+
+rownames(grouped_data) = grouped_data$Bacteria
+cor_data = t(grouped_data)
+cor_data = as.data.frame(cor_data[-1,])
+cor_data[] = lapply(cor_data, as.numeric)
+```
+
+```{r}
+# example correlation, we can do any bacteria
+cor(cor_data$`Anaplasma phagocytophilum`, cor_data$`Borreliella burgdorferi`)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
