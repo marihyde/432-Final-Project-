@@ -6,6 +6,7 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(cowplot)
+library(ggrepel)
 source("http://bit.ly/theme_pub")
 ```
 
@@ -33,20 +34,32 @@ ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme
 ```
 
 ```{r warning=FALSE}
-PCA_data = PCA_data[-which(PCA_data$PC1 > -0.13),] # remove outliers, only 23 observation difference
+PCA_data = PCA_data[-which(PCA_data$PC1 > -0.15),] # remove outliers, only 41 observation difference
 
+# plot
 x = ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme(legend.text = element_text(size = 8), legend.key.size = unit(0.5, "cm"))
 
-legend = get_legend(x) # get and print legend (legend too big to print with graph)
+# get and print legend (legend too big to print with graph)
+legend = get_legend(x) 
 plot_grid(legend)
 ```
 
 ```{r}
-# plot with X marking the bacteria of interest
-x + theme_pub() + geom_text(data = subset(PCA_data, Bacteria %in% c("Borreliella burgdorferi", "Borrelia miyamotoi", "Anaplasma phagocytophilum")), aes(label = "X"), size=3, hjust = 0.5, vjust = -1)
-```
+# get labels
+labels = function(x) {
+  words = unlist(strsplit(x, " "))
+  abbr = paste0(substr(words, 1, 1), collapse = ".")
+  return(abbr)
+}
 
-*NOTE* We need to find a better way to read this PCA graph. There are way too many bacteria to use colours or shapes. 
+# new dataset for labels (so R.b won't be included and clutter the plot)
+PCA_data = PCA_data %>%
+  mutate(label = sapply(Bacteria, labels))
+
+# plot with labels
+x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), 
+                  size = 3, alpha = 0.5)
+```
 
 ```{r warning=F}
 # set up data for correlation calculations
@@ -70,6 +83,8 @@ cor(cor_data$`Anaplasma phagocytophilum`, cor_data$`Borreliella burgdorferi`)
 
 
 
+
+```
 
 
 
