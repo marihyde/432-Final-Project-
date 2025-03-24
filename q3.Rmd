@@ -52,6 +52,10 @@ labels = function(x) {
   return(abbr)
 }
 
+# add labels
+PCA_data = PCA_data %>%
+    mutate(label = sapply(Bacteria, labels))
+
 # plot with labels
 x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), size = 3, alpha = 0.5)
 ```
@@ -69,21 +73,56 @@ cor_data[] = lapply(cor_data, as.numeric)
 ```
 
 ```{r}
-# example correlation, we can do any bacteria
-cor(cor_data$`Anaplasma phagocytophilum`, cor_data$`Borreliella burgdorferi`)
-cor(cor_data$`Rickettsia buchneri`, cor_data$`Borreliella burgdorferi`)
+# correlation with Anaplasma phagocytophilum
+
+correlations_ap = data.frame(Comparison = character(), Correlation = numeric())
+
+for (i in 1:ncol(cor_data)){
+  x = cor(cor_data$`Anaplasma phagocytophilum`, cor_data[[i]])
+  y = data.frame(Comparison = sprintf("Anaplasma phagocytophilum vs. %s", colnames(cor_data[i])), Correlation = x)
+  correlations_ap = rbind(correlations_ap, y)
+}
+
+correlations_ap = correlations_ap %>%
+  arrange(desc(Correlation))
+```
+
+```{r}
+# correlation with Borreliella burgdorferi
+
+correlations_bb = data.frame(Comparison = character(), Correlation = numeric())
+
+for (i in 1:ncol(cor_data)){
+  x = cor(cor_data$`Borreliella burgdorferi`, cor_data[[i]])
+  y = data.frame(Comparison = sprintf("Borreliella burgorferi vs. %s", colnames(cor_data[i])), Correlation = x)
+  correlations_bb = rbind(correlations_bb, y)
+}
+
+correlations_bb = correlations_bb %>%
+  arrange(desc(Correlation))
+```
+
+```{r}
+# correlation with Borrelia miyamotoi
+
+correlations_bm = data.frame(Comparison = character(), Correlation = numeric())
+
+for (i in 1:ncol(cor_data)){
+  x = cor(cor_data$`Borrelia miyamotoi`, cor_data[[i]])
+  y = data.frame(Comparison = sprintf("Borrelia miyamotoi vs. %s", colnames(cor_data[i])), Correlation = x)
+  correlations_bm = rbind(correlations_bm, y)
+}
+
+correlations_bm = correlations_bm %>%
+  arrange(desc(Correlation))
 ```
 
 
-
-
-
-
-
+```{r}
+head(correlations_ap)
+head(correlations_bb)
+head(correlations_bm)
 ```
-
-
-
 
 
 
