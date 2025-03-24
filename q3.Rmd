@@ -76,6 +76,7 @@ cor_data[] = lapply(cor_data, as.numeric)
 ```{r}
 # example correlation, we can do any bacteria
 cor(cor_data$`Anaplasma phagocytophilum`, cor_data$`Borreliella burgdorferi`)
+cor(cor_data$`Rickettsia buchneri`, cor_data$`Borreliella burgdorferi`)
 ```
 
 
