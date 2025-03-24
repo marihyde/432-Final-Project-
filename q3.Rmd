@@ -52,13 +52,8 @@ labels = function(x) {
   return(abbr)
 }
 
-# new dataset for labels (so R.b won't be included and clutter the plot)
-PCA_data = PCA_data %>%
-  mutate(label = sapply(Bacteria, labels))
-
 # plot with labels
-x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), 
-                  size = 3, alpha = 0.5)
+x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), size = 3, alpha = 0.5)
 ```
 
 ```{r warning=F}
