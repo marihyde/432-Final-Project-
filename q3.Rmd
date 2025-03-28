@@ -16,7 +16,8 @@ data = read.table("./data/rawGeneExpression.txt", header=T, sep = "\t")
 # remove unwanted columns & rename
 data = data %>% 
   select(1:5) %>%
-  rename(Bacteria = X)
+  rename(Bacteria = X) %>%
+  mutate(across(2:5, as.numeric))
 
 data$Bacteria = str_extract(data$Bacteria, "^[^;]+") # removing extra stuff from bacteria name
 ```
@@ -34,7 +35,7 @@ ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme
 ```
 
 ```{r warning=FALSE}
-PCA_data = PCA_data[-which(PCA_data$PC1 > -0.15),] # remove outliers, only 41 observation difference
+PCA_data = PCA_data[-which(PCA_data$PC1 > -0.15),] # remove outliers, only 41 observation difference. We are not intersted in the far away ones anyways. 
 
 # plot
 x = ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme(legend.text = element_text(size = 8), legend.key.size = unit(0.5, "cm"))
@@ -44,7 +45,7 @@ legend = get_legend(x)
 plot_grid(legend)
 ```
 
-```{r}
+```{r fig.cap = "PCA analysis of bacterial species found in four different tick species near Kingston, Ontario."}
 # get labels
 labels = function(x) {
   words = unlist(strsplit(x, " "))
@@ -57,8 +58,16 @@ PCA_data = PCA_data %>%
     mutate(label = sapply(Bacteria, labels))
 
 # plot with labels
-x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), size = 3, alpha = 0.5)
+options(ggrepel.max.overlaps = Inf) # need this for all labels
+
+x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria == "Rickettsia buchneri", "", label)), size = 3, alpha = 0.5,)
+
+# the unlabeled purple points are Rickettsia buchneri
 ```
+
+PCA analysis of bacterial species found in four different tick species. Each point represents a bacterial species, with proximity to others indicating co-occurrence across similar tick samples. PC1 & PC2 together explain the majority of the variation in bacterial distribution across tick samples.
+
+However, there are only four tick samples. This causes all bacteria found to cluster relatively closely. To get more precise idea, we can use correlations between the three bacteria of interest and the other bacteria found in the tick samples. 
 
 ```{r warning=F}
 # set up data for correlation calculations
@@ -84,7 +93,8 @@ for (i in 1:ncol(cor_data)){
 }
 
 correlations_ap = correlations_ap %>%
-  arrange(desc(Correlation))
+  arrange(desc(Correlation)) %>%
+  slice(-1) # the first row is the bacteria vs itself
 ```
 
 ```{r}
@@ -99,7 +109,8 @@ for (i in 1:ncol(cor_data)){
 }
 
 correlations_bb = correlations_bb %>%
-  arrange(desc(Correlation))
+  arrange(desc(Correlation)) %>%
+  slice(-1) # the first row is the bacteria vs itself
 ```
 
 ```{r}
@@ -114,18 +125,39 @@ for (i in 1:ncol(cor_data)){
 }
 
 correlations_bm = correlations_bm %>%
-  arrange(desc(Correlation))
+  arrange(desc(Correlation)) %>%
+  slice(-1) # the first row is the bacteria vs itself
 ```
 
 
 ```{r}
-head(correlations_ap)
-head(correlations_bb)
-head(correlations_bm)
+correlations_ap
+correlations_bb
+correlations_bm
 ```
 
+All correlations are high due to there being only four tick samples. Nearly all are within 0.1 of being perfectly correlated. By another method:
 
+45F is the only tick to significantly express Borreliella burgorferi, the primary diagnostic pathogen for LD. 38F also does, but only 1 instance compared to 13. We will find all bacteria that were only expressed in tick 45F.
 
+```{r}
+bac_45F = list()
+
+for (i in 1:nrow(data)){
+  if (sum(data[i,2:4]) == 0 &
+      data[i,5] != 0  &
+      !(data$Bacteria[i] %in% c("Anaplasma phagocytophilum",
+                                  "Borreliella burgdorferi",
+                                  "Rickettsia buchneri",
+                                  "Borrelia miyamotoi"))){
+    bac_45F[[length(bac_45F)+1]] = data$Bacteria[i]
+  }
+}
+
+bac_45F
+```
+
+The displayed bacteria are the ones only found in tick 45F, which is the only tick expressing Borreliella burgorferi significantly. Therefore these bacteria could be potential bio-markers for LD as well. Further analysis with more ticks could verify these conclusions. 
 
 
 
