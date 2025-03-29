@@ -34,6 +34,12 @@ PCA_data$Bacteria = data$Bacteria # add names back for colour coding
 ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme_pub() # plot is bad, we will remove outliers
 ```
 
+```{r}
+summary(PCA)
+PCA$loadings
+```
+
+
 ```{r warning=FALSE}
 PCA_data = PCA_data[-which(PCA_data$PC1 > -0.15),] # remove outliers, only 41 observation difference. We are not intersted in the far away ones anyways. 
 
@@ -65,7 +71,7 @@ x + theme_pub() + geom_text_repel(data = PCA_data, aes(label = ifelse(Bacteria =
 # the unlabeled purple points are Rickettsia buchneri
 ```
 
-PCA analysis of bacterial species found in four different tick species. Each point represents a bacterial species, with proximity to others indicating co-occurrence across similar tick samples. PC1 & PC2 together explain the majority of the variation in bacterial distribution across tick samples.
+PCA analysis of bacterial species found in four different tick species. Each point represents a bacterial species, with proximity to others indicating co-occurrence across similar tick samples. 
 
 However, there are only four tick samples. This causes all bacteria found to cluster relatively closely. To get more precise idea, we can use correlations between the three bacteria of interest and the other bacteria found in the tick samples. 
 
@@ -131,9 +137,13 @@ correlations_bm = correlations_bm %>%
 
 
 ```{r}
-correlations_ap
-correlations_bb
-correlations_bm
+# make table for poster
+newdata = data.frame()
+newdata = data.frame(Comparison = correlations_ap$Comparison[1:3], Correlation = correlations_ap$Correlation[1:3]) %>%
+  rbind(newdata, data.frame(Comparison = correlations_bb$Comparison[1:3], Correlation = correlations_bb$Correlation[1:3])) %>%
+  rbind(newdata, data.frame(Comparison = correlations_bm$Comparison[1:3], Correlation = correlations_bm$Correlation[1:3]))
+
+knitr::kable(newdata)
 ```
 
 All correlations are high due to there being only four tick samples. Nearly all are within 0.1 of being perfectly correlated. By another method:
