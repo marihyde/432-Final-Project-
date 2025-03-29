@@ -36,9 +36,8 @@ ggplot(data=PCA_data, aes(x=PC1, y=PC2, colour=Bacteria)) + geom_point() + theme
 
 ```{r}
 summary(PCA)
-PCA$loadings
+str(PCA)
 ```
-
 
 ```{r warning=FALSE}
 PCA_data = PCA_data[-which(PCA_data$PC1 > -0.15),] # remove outliers, only 41 observation difference. We are not intersted in the far away ones anyways. 
