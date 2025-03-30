@@ -139,10 +139,11 @@ bac_45F = list()
 for (i in 1:nrow(data)){
   if (sum(data[i,2:4]) == 0 &
       data[i,5] != 0  &
-      !(data$Bacteria[i] %in% c("Anaplasma phagocytophilum",
+      !(data$Bacteria[i] %in% c("Anaplasma phagocytophilum", # remove bacteria with multiple instances (misleading positives)
                                   "Borreliella burgdorferi",
                                   "Rickettsia buchneri",
-                                  "Borrelia miyamotoi"))){
+                                  "Borrelia miyamotoi",
+                                "Rickettsia endosymbiont of Ixodes scapularis"))){ 
     bac_45F[[length(bac_45F)+1]] = data$Bacteria[i]
   }
 }
