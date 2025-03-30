@@ -1,0 +1,204 @@
+---
+title: "Q1"
+author: "Jade Goodman"
+date: "2025-03-30"
+output: html_document
+---
+# Question #1:
+## How do Bacteroidetes and Firmicutes phyla appear in the dataset, and does their composition correlate with LD incidence? 
+
+
+
+## Setting Up
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggtree)
+library(ape)
+library(tidytree)
+```
+
+```{r}
+seqtab <- readRDS("seqtab.nochim_sep5_job11_AandC_only.RDS")       
+taxa <- readRDS("taxa_test_sep5_job11_AandC_only.RDS")    
+contaminants <- read.csv("Supplemental_Table_S4_.csv")
+head(contaminants)
+
+seqtab_df <- as.data.frame(seqtab)
+taxa_df <- as.data.frame(taxa)
+
+head(taxa_df)
+head(seqtab_df) #looks good 
+```
+
+```{r}
+#cleaning up the taxa dataframe
+asv_df <- taxa_df %>% mutate(X = paste("ASV", row_number(), sep = ""))
+View(asv_df)
+
+#removing contaminants from taxa dataframe
+asv_df <- asv_df %>%
+  anti_join(contaminants, by = "X")
+```
+
+## Part 1: Phylogenetic Visualization of Bacteroidetes and Firmicutes
+```{r}
+#remove non-Bacteria organisms for the sake of the phylogeny -- will not run if not narrowed down further
+asv_df <- asv_df %>% filter(Kingdom == "Bacteria")
+dim(asv_df)
+
+#dataset only using Bacteroidetes + Firmicutes
+bact_firm <- asv_df %>%
+  filter(Phylum %in% c("Bacteroidetes", "Firmicutes"))
+
+head(bact_firm)
+```
+
+```{r}
+ranks <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species") #establishing columns as classifications
+```
+
+```{r}
+bact_firm <- bact_firm %>% mutate(across(everything(), as.character))
+
+#calculating distance of relatedness between species -- the more differences there are, the higher the distance
+compute_distance <- function(bact_firm) {
+  n <- nrow(bact_firm)
+  dist_matrix <- matrix(0, n, n)
+  rownames(dist_matrix) <- bact_firm$X
+  colnames(dist_matrix) <- bact_firm$X
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      shared_ranks <- sum(bact_firm[i, ranks] == bact_firm[j, ranks], na.rm = TRUE)
+      dist_matrix[i, j] <- length(ranks) - shared_ranks
+    }
+  }
+  
+  as.dist(dist_matrix)
+}
+
+dist <- compute_distance(bact_firm)
+```
+
+```{r}
+#building tree
+mytree <- nj(dist)
+mytree <- root(mytree, outgroup = bact_firm$X[1], resolve.root = TRUE)
+
+str(mytree) #checking metadata -- need to add phylums
+
+match_phylums <- bact_firm$X[match(mytree$tip.label, bact_firm$X)] #using this to match ASVs to nodes
+```
+
+```{r warning=FALSE}
+species_tree <- ggtree(mytree, branch.length="none", layout="circular") +
+  geom_tiplab(size=1, align=TRUE) + 
+  ggtitle("Phylogeny of Detected Bacteroidetes and Firmicutes ASVs") +
+  geom_cladelabel(node=593, label="Firmicutes", align=T, color='blue', hjust=-1) +
+  geom_cladelabel(node=100, label="Bacteroidetes", align=T, color='red', hjust=-1) +
+  geom_highlight(node=593, fill="blue", type="encircle")
+
+species_tree
+```
+
+## Part 2: Assessing Relative Abundance of Bacteroidetes vs. Firmicutes
+```{r}
+View(taxa_df)
+View(seqtab_df)
+
+taxa_df <- taxa_df %>% rownames_to_column(var = "ASV")
+
+all(colnames(seqtab_df) %in% taxa_df$ASV)  #returns TRUE!
+```
+
+```{r}
+# Filter for ASVs that belong to Bacteroidetes and Firmicutes
+bact_asvs <- taxa_df %>% filter(Phylum == "Bacteroidetes") %>% pull(ASV)
+firm_asvs <- taxa_df %>% filter(Phylum == "Firmicutes") %>% pull(ASV)
+
+# Sum up ASV counts per sample for each phylum
+bact_counts <- rowSums(seqtab_df[, colnames(seqtab_df) %in% bact_asvs, drop = FALSE])
+firm_counts <- rowSums(seqtab_df[, colnames(seqtab_df) %in% firm_asvs, drop = FALSE])
+
+# Get total read counts per sample so we can calculate relative abundance
+total_counts <- rowSums(seqtab_df)
+
+# Calculate relative abundances per sample
+bact_rel <- bact_counts / total_counts
+firm_rel <- firm_counts / total_counts
+
+# Combine into a single data frame for plotting/analysis
+phyla_rel_df <- data.frame(
+  Sample = rownames(seqtab_df),
+  Bacteroidetes = bact_rel,
+  Firmicutes = firm_rel
+)
+
+# Take a quick peek at the first few rows
+head(phyla_rel_df, 3)
+```
+
+```{r}
+# Check if there's any correlation between the two phyla
+cor_matrix <- cor(phyla_rel_df[, c("Bacteroidetes", "Firmicutes")], use = "complete.obs")
+print(cor_matrix)
+# Result: r = -0.02, so basically no correlation
+```
+
+```{r}
+# Reshape the data for plotting (long format)
+plot_df <- phyla_rel_df %>%
+  pivot_longer(cols = c(Bacteroidetes, Firmicutes),
+               names_to = "Phylum",
+               values_to = "RelativeAbundance")
+
+# Create a log-transformed boxplot comparing the two phyla
+ggplot(plot_df, aes(x = Phylum, y = RelativeAbundance + 0.001, fill = Phylum)) +
+  geom_boxplot(outlier.shape = 21, alpha = 0.6) +
+  scale_y_log10(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(title = "Log-Transformed Relative Abundance of Bacteroidetes vs. Firmicutes",
+       y = "Log Relative Abundance (%)",
+       x = NULL) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Add log-transformed values to the data (for statistical tests)
+plot_df <- plot_df %>%
+  mutate(log_rel_abund = log10(RelativeAbundance + 0.001))
+```
+
+```{r}
+# Run a Wilcoxon rank-sum test (non-parametric) on the log-transformed data
+wilcox.test(log_rel_abund ~ Phylum, data = plot_df)
+```
+
+## ---- Optional: run a basic z-test to confirm the difference in means ---- 
+
+```{r}
+# Pull out values for each phylum
+bact_vals <- plot_df %>% filter(Phylum == "Bacteroidetes") %>% pull(log_rel_abund)
+firm_vals <- plot_df %>% filter(Phylum == "Firmicutes") %>% pull(log_rel_abund)
+```
+
+```{r}
+# Calculate stats
+mean_bact <- mean(bact_vals)
+mean_firm <- mean(firm_vals)
+sd_bact <- sd(bact_vals)
+sd_firm <- sd(firm_vals)
+n_bact <- length(bact_vals)
+n_firm <- length(firm_vals)
+```
+
+```{r}
+# Calculate standard error and z-score
+se_diff <- sqrt((sd_bact^2 / n_bact) + (sd_firm^2 / n_firm))
+z_score <- (mean_bact - mean_firm) / se_diff
+p_value_z <- 2 * pnorm(-abs(z_score))  # two-tailed
+
+# Print z-test results
+cat("Z-score:", z_score, "\n")
+cat("P-value:", p_value_z, "\n")
+```
