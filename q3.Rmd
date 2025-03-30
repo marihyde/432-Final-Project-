@@ -5,7 +5,6 @@
 library(dplyr)
 library(ggplot2)
 library(stringr)
-library(cowplot)
 library(ggrepel)
 library(vegan)
 source("http://bit.ly/theme_pub")
