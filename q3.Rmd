@@ -11,7 +11,7 @@ source("http://bit.ly/theme_pub")
 ```
 
 ```{r}
-data = read.table("./data/rawGeneExpression.txt", header=T, sep = "\t")
+data = read.table("rawGeneExpression.txt", header=T, sep = "\t")
 
 # remove unwanted columns & rename
 data = data %>% 
@@ -150,6 +150,8 @@ All correlations are high due to there being only four tick samples. Nearly all 
 45F is the only tick to significantly express Borreliella burgorferi, the primary diagnostic pathogen for LD. 38F also does, but only 1 instance compared to 13. We will find all bacteria that were only expressed in tick 45F.
 
 ```{r}
+# extract bacteria only in tick 45F
+
 bac_45F = list()
 
 for (i in 1:nrow(data)){
