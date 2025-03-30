@@ -1,0 +1,137 @@
+---
+title: "Q2"
+output: html_document
+date: "2025-03-30"
+---
+
+
+
+#Part 1: Neighbourhood-joining tree: 
+
+Loading required packages:
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(ape)
+library(ggtree)
+library(vegan)
+library(dplyr)
+library(tidyr)
+```
+
+Loading in the dataset:
+
+```{r}
+ticks <- read.csv("432 Final Combined Data.csv")
+
+Samples20 <- read.csv("samples20.csv")
+```
+
+
+processesing the dataset, filtering out low-abundance samples, and visualizing the distribution of remaining data:
+
+```{r}
+write.table(ticks, file = "OTUfile.txt", sep = "\t", row.names = F, col.names = T, quote = F)
+OTUticks = read.delim("./OTUfile.txt",
+                       header = T, sep = "\t",
+                       row.names = "Sample")
+
+OTUticks2 <- OTUticks %>%
+  select(-c(Location))
+
+OTUticks3 <- rowSums(OTUticks2) < 5
+sum(OTUticks3)
+
+
+OTUred <- OTUticks2[!OTUticks3,]
+
+ggplot() + 
+  geom_histogram(aes(x = rowSums(OTUred)))
+```
+
+
+
+
+Generating the OTU dissimilarity matrix based on Bray-Curtis dissimilarity:
+
+```{r}
+OTUred[OTUred > 0] <- 1
+
+OTUTickdistance2 <- vegdist(OTUred, method = "bray", binary = F)
+
+OTUtree2 <- nj(OTUTickdistance2)
+
+```
+
+
+Creating the neighbourhood-joining tree: 
+
+```{r}
+ggtree(OTUtree2, layout = "circular") %<+% Samples20 + 
+  geom_tiplab(aes(colour = Location), size = 2) + 
+  theme(legend.position = "right")  + 
+  theme_void() +
+  xlim(-0.75,0.75) + 
+  scale_color_discrete(name = "Sampling Location",
+                       labels = c("Control", "Lemoine Point", "Murphy's Point", "QUBS"))
+```
+
+
+#PART 2: NMDS plot:
+
+Creating NMDS matrix: 
+
+```{r, echo=FALSE}
+set.seed(13)
+
+OTUtickdistance <- dist(OTUred, method = 'binary')
+
+TickNMDS <- metaMDS(OTUtickdistance, k = 2)
+```
+
+
+Generating NMDS plot: 
+
+```{r}
+PTickDat <- data.frame(NMDSA1 = TickNMDS$points[,1],
+                   NMDSA2 = TickNMDS$points[,2],
+                   Sample = row.names(OTUred))
+
+PTickDat <- merge(PTickDat, ticks, by = "Sample", all.x = T, all.y = F)
+
+ggplot(aes(x = NMDSA1, y = NMDSA2, colour = Location),
+       alpha = I(0.6), data = PTickDat) + 
+  geom_point(size = 3) + 
+  theme_bw() + 
+  theme(axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14)) + 
+  theme(legend.position = "bottom") + 
+  scale_color_discrete(name = "Sampling Location",
+                       labels = c("Control", "Lemoine Point", "Murphy's Point", "QUBS"))
+```
+
+
+#PART 3: Statistical Analysis- PERMANOVA
+
+Creating the proper data set for the PERMANOVA. Log-transforming to account for many zeros in dataset:
+
+```{r}
+asv_matrix <- ticks[, -(1:2)]
+asv_matrix <- decostand(asv_matrix, method = "hellinger")
+asv_dist <- vegdist(asv_matrix, method = "bray")
+asv_matrix <- log1p(asv_matrix)
+
+```
+
+
+Performing the PERMANOVA:
+
+```{r}
+permanova_results <- adonis2(asv_dist ~ Location, data = ticks, permutations = 999)
+print(permanova_results)
+
+```
+
+
+
+
