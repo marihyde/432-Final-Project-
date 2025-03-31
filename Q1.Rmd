@@ -136,6 +136,12 @@ phyla_rel_df <- data.frame(
   Firmicutes = firm_rel
 )
 
+phyla_rel_df <- phyla_rel_df[!phyla_rel_df$Sample %in% c(
+  "neg_beads_a", "neg_beads_c",
+  "neg_PCR_a", "neg_PCR_c"
+), ]
+
+
 # Take a quick peek at the first few rows
 head(phyla_rel_df, 3)
 ```
